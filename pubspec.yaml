@@ -39,6 +39,7 @@ dependencies:
   flutter_emoji: ^2.4.0
   shared_preferences: ^2.0.12
   intl: ^0.17.0
+  image_picker: ^0.8.4+6
 
 dev_dependencies:
   flutter_test:

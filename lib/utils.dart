@@ -1,3 +1,4 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 String formatDateTime(DateTime dateTime) {
@@ -14,4 +15,16 @@ String formatHourMinute(DateTime dateTime) {
 
 String getKey(DateTime dateTime) {
   return DateFormat("yyyy-MM-dd").format(dateTime);
+}
+
+List<String> getImagePaths(List<XFile>? imageFiles) {
+  List<String> paths = [];
+  if (imageFiles == null) {
+    return paths;
+  }
+
+  for (var i in imageFiles) {
+    paths.add(i.path);
+  }
+  return paths;
 }

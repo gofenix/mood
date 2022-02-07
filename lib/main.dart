@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mood/eventbus.dart';
 import 'package:mood/utils.dart';
@@ -188,6 +191,25 @@ class _DailyPageState extends State<DailyPage> {
     return Column(children: w);
   }
 
+  List<Widget> _previewImages(List<dynamic>? paths) {
+    if (paths == null) {
+      return <Widget>[];
+    }
+
+    return <Widget>[
+      for (var f in paths)
+        kIsWeb
+            ? Image.network(
+                f,
+                fit: BoxFit.cover,
+              )
+            : Image.file(
+                File(f),
+                fit: BoxFit.cover,
+              )
+    ];
+  }
+
   Widget buildItemCard(List<String>? data) {
     if (data == null) {
       return Center(
@@ -218,7 +240,14 @@ class _DailyPageState extends State<DailyPage> {
               ),
             ],
           ),
-          subtitle: Text(map["note"]),
+          subtitle: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(map["note"]),
+              ..._previewImages(map["images"]),
+            ],
+          ),
         ),
       );
 
@@ -290,174 +319,214 @@ class _EditPageState extends State<EditPage> {
   String? _emo;
   String? _note;
 
+  late ImagePicker _picker;
+  List<XFile>? _imageFiles;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _picker = ImagePicker();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.calendar_today),
-              TextButton(
-                onPressed: () {
-                  showModalBottomSheet(
-                      context: context,
-                      builder: (context) {
-                        return Container(
-                          height: 150,
-                          child: CupertinoDatePicker(
-                            onDateTimeChanged: (value) {
-                              setState(() {
-                                _dateTime = value;
-                              });
-                            },
-                            initialDateTime: _dateTime,
-                          ),
-                        );
-                      });
-                },
-                child:
-                    Text("${formatDateTime(_dateTime)}", textScaleFactor: 1.5),
-              ),
-            ],
-          ),
-          SizedBox(height: 30),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("你感觉怎么样？", textScaleFactor: 2),
-              Card(
-                child: ListTile(
-                  title: Text("小情绪"),
-                  subtitle: Row(
-                    children: [
-                      Column(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _emo = "开心";
-                              });
-                            },
-                            icon: Icon(Icons.emoji_emotions),
-                            color: (_emo == "开心" ? Colors.red : Colors.grey),
-                          ),
-                          Text("开心"),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _emo = "还行";
-                              });
-                            },
-                            icon: Icon(Icons.emoji_emotions),
-                            color: (_emo == "还行" ? Colors.red : Colors.grey),
-                          ),
-                          Text("还行"),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _emo = "难过";
-                              });
-                            },
-                            icon: Icon(Icons.emoji_emotions),
-                            color: (_emo == "难过" ? Colors.red : Colors.grey),
-                          ),
-                          Text("难过"),
-                        ],
-                      ),
-                    ],
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  ),
-                ),
-              ),
-              SizedBox(height: 15),
-              Divider(height: 2),
-              SizedBox(height: 15),
-              Text("你这一阵子都在忙些什么？", textScaleFactor: 1.8),
-              SizedBox(height: 10),
-              Card(
-                child: ListTile(
-                  title: Row(
-                    children: [Icon(Icons.book), Text("笔记")],
-                  ),
-                  subtitle: TextFormField(
-                    restorationId: "biji",
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                    onChanged: (String? value) {
-                      _note = value;
-                    },
-                  ),
-                ),
-              ),
-              Card(
-                child: ListTile(
-                  title: Row(
-                    children: [
-                      Icon(Icons.photo),
-                      Text("照片"),
-                    ],
-                  ),
-                  subtitle: ElevatedButton(
-                    child: Text("轻点选择照片"),
-                    onPressed: () {},
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 30,
-              ),
-              Center(
-                child: IconButton(
-                  onPressed: () async {
-                    if (_emo == null || _note == null) {
-                      showDialog(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.calendar_today),
+                TextButton(
+                  onPressed: () {
+                    showModalBottomSheet(
                         context: context,
                         builder: (context) {
-                          return SimpleDialog(
-                            children: [Center(child: Text("请记录情绪或日记"))],
+                          return Container(
+                            height: 150,
+                            child: CupertinoDatePicker(
+                              onDateTimeChanged: (value) {
+                                setState(() {
+                                  _dateTime = value;
+                                });
+                              },
+                              initialDateTime: _dateTime,
+                            ),
                           );
-                        },
-                      );
-                      return;
-                    }
-
-                    final prefs = await SharedPreferences.getInstance();
-
-                    final key = getKey(_dateTime);
-                    var olds = await prefs.getStringList(key) ?? [];
-
-                    final model = {
-                      "emo": _emo,
-                      "datetime": formatDateTime(_dateTime),
-                      "note": _note,
-                    };
-                    olds.add(json.encode(model));
-                    await prefs.setStringList(key, olds);
-                    bus.emit("moods", olds);
-                    Navigator.pop(context);
+                        });
                   },
-                  icon: Icon(Icons.arrow_forward_ios),
-                  iconSize: 50,
+                  child: Text("${formatDateTime(_dateTime)}",
+                      textScaleFactor: 1.5),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            SizedBox(height: 30),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("你感觉怎么样？", textScaleFactor: 2),
+                Card(
+                  child: ListTile(
+                    title: Text("小情绪"),
+                    subtitle: Row(
+                      children: [
+                        Column(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _emo = "开心";
+                                });
+                              },
+                              icon: Icon(Icons.emoji_emotions),
+                              color: (_emo == "开心" ? Colors.red : Colors.grey),
+                            ),
+                            Text("开心"),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _emo = "还行";
+                                });
+                              },
+                              icon: Icon(Icons.emoji_emotions),
+                              color: (_emo == "还行" ? Colors.red : Colors.grey),
+                            ),
+                            Text("还行"),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _emo = "难过";
+                                });
+                              },
+                              icon: Icon(Icons.emoji_emotions),
+                              color: (_emo == "难过" ? Colors.red : Colors.grey),
+                            ),
+                            Text("难过"),
+                          ],
+                        ),
+                      ],
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 15),
+                Divider(height: 2),
+                SizedBox(height: 15),
+                Text("你这一阵子都在忙些什么？", textScaleFactor: 1.8),
+                SizedBox(height: 10),
+                Card(
+                  child: ListTile(
+                    title: Row(
+                      children: [Icon(Icons.book), Text("笔记")],
+                    ),
+                    subtitle: TextFormField(
+                      restorationId: "biji",
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      onChanged: (String? value) {
+                        _note = value;
+                      },
+                    ),
+                  ),
+                ),
+                Card(
+                  child: ListTile(
+                      title: Row(
+                        children: [
+                          Icon(Icons.photo),
+                          Text("照片"),
+                        ],
+                      ),
+                      subtitle: Column(
+                        children: [
+                          ElevatedButton(
+                            child: Text("轻点选择照片"),
+                            onPressed: () async {
+                              final files = await _picker.pickMultiImage();
+                              setState(() {
+                                _imageFiles = files;
+                              });
+                            },
+                          ),
+                          ...() {
+                            var images = <Widget>[];
+                            if (_imageFiles != null) {
+                              for (var f in _imageFiles!) {
+                                images.add(
+                                  kIsWeb
+                                      ? Image.network(
+                                          f.path,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.file(
+                                          File(f.path),
+                                          fit: BoxFit.cover,
+                                        ),
+                                );
+                              }
+                            }
+                            return images;
+                          }()
+                        ],
+                      )),
+                ),
+                SizedBox(
+                  height: 30,
+                ),
+                Center(
+                  child: IconButton(
+                    onPressed: () async {
+                      if (_emo == null || _note == null) {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return SimpleDialog(
+                              children: [Center(child: Text("请记录情绪或日记"))],
+                            );
+                          },
+                        );
+                        return;
+                      }
+
+                      final prefs = await SharedPreferences.getInstance();
+
+                      final key = getKey(_dateTime);
+                      var olds = await prefs.getStringList(key) ?? [];
+
+                      final model = {
+                        "emo": _emo,
+                        "datetime": formatDateTime(_dateTime),
+                        "note": _note,
+                        "images": getImagePaths(_imageFiles)
+                      };
+                      olds.add(json.encode(model));
+                      await prefs.setStringList(key, olds);
+                      bus.emit("moods", olds);
+                      Navigator.pop(context);
+                    },
+                    icon: Icon(Icons.arrow_forward_ios),
+                    iconSize: 50,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
